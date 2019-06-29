@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-/* This function provide us access to the original libc free(). This is useful
+/* 这个函数让我们可以访问原来的libc free（）. This is useful
  * for instance to free results obtained by backtrace_symbols(). We need
  * to define this function before including zmalloc.h that may shadow the
  * free implementation if we use jemalloc or another non standard allocator. */
@@ -14,7 +14,7 @@ void zlibc_free(void *ptr) {
 
 #include <string.h>
 #include <pthread.h>
-#include "config.h"
+//#include "config.h"
 #include "zmalloc.h"
 #include "atomicvar.h"
 

@@ -42,9 +42,10 @@
 #endif
 #endif
 
-/* We can enable the Redis defrag capabilities only if we are using Jemalloc
- * and the version used is our special version modified for Redis having
- * the ability to return per-allocation fragmentation hints. */
+/* 我们只有在使用Jemalloc时才能启用Redis碎片整理功能,
+ * 并且使用的版本是我们为Redis修改的特殊版本,
+ * 能够返回每个分配的碎片提示.
+ */
 #if defined(USE_JEMALLOC) && defined(JEMALLOC_FRAG_HINT)
 #define HAVE_DEFRAG
 #endif
