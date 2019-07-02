@@ -1,22 +1,16 @@
 
+# 唯一的缺点就是需要将每一个.o文件写上
+obj=main.o dict.o zmalloc.o serverlog.o localtime.o siphash.o sds.o
 
+CFLAGS=-g -Wall 
 
-#app: main.o adlist.o
-#	gcc main.o adlist.o -o app
+target=app
 
-#main.o: adlistmain.c
-#	gcc -c adlistmain.c -o main.o
+CC=gcc
 
-#adlist.o: adlist.c zmalloc.c
-#	gcc  adlist.c zmalloc.c -o adlist.o
+$(target):$(obj)
+	$(CC)  $(CFLAGS) $(obj) -o  $(target)
 
-
-app: main.o serverlog.o localtime.o
-	gcc main.o  serverlog.o localtime.o -o app
-
-main.o: adlistmain.c serverlog.c localtime.c
-	gcc adlistmain.c serverlog.c localtime.c -o main.o
-	
-serverlog.o: serverlog.c localtime.c
-	gcc 
+%.o:%.c
+	$(CC) -c $(CFLAGS)  $< -o $@
 

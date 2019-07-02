@@ -1,5 +1,9 @@
 #include"serverlog.h"
-
+#include <stdarg.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <time.h>
+#include <stdio.h>
 
 void serverLog(int level, const char *fmt, ...) {
     va_list ap;
@@ -13,7 +17,7 @@ void serverLog(int level, const char *fmt, ...) {
     serverLogRaw(level,msg,"");
 }
 
-void serverLogRaw(int level, const char *msg,char * logfile) {
+void serverLogRaw(int level, const char *msg,const char* logfile) {
     const int syslogLevelMap[] = { LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING };
     const char *c = ".-*#";
     FILE *fp;
@@ -38,7 +42,7 @@ void serverLogRaw(int level, const char *msg,char * logfile) {
 
         gettimeofday(&tv,NULL);
         struct tm tm;
-        nolocks_localtime(&tm,tv.tv_sec,server.timezone,server.daylight_active);
+        nolocks_localtime(&tm,tv.tv_sec,getTimeZone(),getDaylightActive());
         off = strftime(buf,sizeof(buf),"%d %b %Y %H:%M:%S.",&tm);
         snprintf(buf+off,sizeof(buf)-off,"%03d",(int)tv.tv_usec/1000);
 		
@@ -48,6 +52,28 @@ void serverLogRaw(int level, const char *msg,char * logfile) {
 
     if (!log_to_stdout) fclose(fp);
     syslog(syslogLevelMap[level], "%s", msg);
+}
+
+/*
+ * 以更方便的方式获取适当的时区
+ * i.e 时区变量是特定于linux的.
+ */
+  unsigned long getTimeZone(void) {
+    struct timeval tv;
+    struct timezone tz;
+
+    gettimeofday(&tv, &tz);
+
+    return tz.tz_minuteswest * 60UL;
+
+}
+
+int getDaylightActive(){
+
+	struct tm tm;
+	time_t unixtime = time(NULL);
+	localtime_r(&unixtime,&tm);
+	return tm.tm_isdst;
 }
 
 

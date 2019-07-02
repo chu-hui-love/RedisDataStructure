@@ -46,20 +46,19 @@
 
 #include "dict.h"
 #include "zmalloc.h"
-#ifndef DICT_BENCHMARK_MAIN
-#include "redisassert.h"
-#else
+#include "serverlog.h"
 #include <assert.h>
-#endif
+
 
 /* 使用dictEnableResize()/dictDisableResize().我们可以根据需要启用/禁用哈希表的大小调整.
  * 对Redis来说是非常重要的,因为我们使用的是写时复制,
  * 并且当有一个孩子执行保存操作时,我们不想移动太多的内存.
  *
- *
+ * 
  * 请注意,即使将dict_can_resize设置为0,
  * 也不会阻止所有调整大小:如果元素数量与存储桶之间的比率>dict_force_resize_ratio,
  * 则仍允许哈希表增长.
+ * 2019年7月2日20:37:34 理论上,这个hash表是可以无限扩容的
  */
 static int dict_can_resize = 1;
 static unsigned int dict_force_resize_ratio = 5;
@@ -97,6 +96,8 @@ uint64_t dictGenCaseHashFunction(const unsigned char *buf, int len) {
     return siphash_nocase(buf,len,dict_hash_function_seed);
 }
 
+
+
 /* ----------------------------- API implementation ------------------------- */
 
 /* 重置已使用ht_init()初始化的哈希表.
@@ -113,6 +114,10 @@ static void _dictReset(dictht *ht)
 dict *dictCreate(dictType *type,
         void *privDataPtr)
 {
+
+ serverLog(LL_WARNING,"create dictCreate...");
+
+
     dict *d = zmalloc(sizeof(*d));
 
     _dictInit(d,type,privDataPtr);
@@ -304,10 +309,9 @@ dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing)
     if ((index = _dictKeyIndex(d, key, dictHashKey(d,key), existing)) == -1)
         return NULL;
 
-    /* Allocate the memory and store the new entry.
-     * Insert the element in top, with the assumption that in a database
-     * system it is more likely that recently added entries are accessed
-     * more frequently. */
+    /* 分配内存并存储新条目.
+     * 将元素插入顶部,假设在数据库系统中更有可能更频繁地访问最近添加的条目.
+     */
     ht = dictIsRehashing(d) ? &d->ht[1] : &d->ht[0];
     entry = zmalloc(sizeof(*entry));
     entry->next = ht->table[index];
@@ -1110,119 +1114,10 @@ void dictGetStats(char *buf, size_t bufsize, dict *d) {
     if (orig_bufsize) orig_buf[orig_bufsize-1] = '\0';
 }
 
-/* ------------------------------- Benchmark ---------------------------------*/
+int tryInvokeDictFunction(int firstValue,int secondValue){
 
-#ifdef DICT_BENCHMARK_MAIN
-
-#include "sds.h"
-
-uint64_t hashCallback(const void *key) {
-    return dictGenHashFunction((unsigned char*)key, sdslen((char*)key));
+		serverLog(LL_WARNING,"the firstValue=%d,the secondValue=%d",firstValue,secondValue);
+		return firstValue+secondValue;
 }
 
-int compareCallback(void *privdata, const void *key1, const void *key2) {
-    int l1,l2;
-    DICT_NOTUSED(privdata);
 
-    l1 = sdslen((sds)key1);
-    l2 = sdslen((sds)key2);
-    if (l1 != l2) return 0;
-    return memcmp(key1, key2, l1) == 0;
-}
-
-void freeCallback(void *privdata, void *val) {
-    DICT_NOTUSED(privdata);
-
-    sdsfree(val);
-}
-
-dictType BenchmarkDictType = {
-    hashCallback,
-    NULL,
-    NULL,
-    compareCallback,
-    freeCallback,
-    NULL
-};
-
-#define start_benchmark() start = timeInMilliseconds()
-#define end_benchmark(msg) do { \
-    elapsed = timeInMilliseconds()-start; \
-    printf(msg ": %ld items in %lld ms\n", count, elapsed); \
-} while(0);
-
-/* dict-benchmark [count] */
-int main(int argc, char **argv) {
-    long j;
-    long long start, elapsed;
-    dict *dict = dictCreate(&BenchmarkDictType,NULL);
-    long count = 0;
-
-    if (argc == 2) {
-        count = strtol(argv[1],NULL,10);
-    } else {
-        count = 5000000;
-    }
-
-    start_benchmark();
-    for (j = 0; j < count; j++) {
-        int retval = dictAdd(dict,sdsfromlonglong(j),(void*)j);
-        assert(retval == DICT_OK);
-    }
-    end_benchmark("Inserting");
-    assert((long)dictSize(dict) == count);
-
-    /* Wait for rehashing. */
-    while (dictIsRehashing(dict)) {
-        dictRehashMilliseconds(dict,100);
-    }
-
-    start_benchmark();
-    for (j = 0; j < count; j++) {
-        sds key = sdsfromlonglong(j);
-        dictEntry *de = dictFind(dict,key);
-        assert(de != NULL);
-        sdsfree(key);
-    }
-    end_benchmark("Linear access of existing elements");
-
-    start_benchmark();
-    for (j = 0; j < count; j++) {
-        sds key = sdsfromlonglong(j);
-        dictEntry *de = dictFind(dict,key);
-        assert(de != NULL);
-        sdsfree(key);
-    }
-    end_benchmark("Linear access of existing elements (2nd round)");
-
-    start_benchmark();
-    for (j = 0; j < count; j++) {
-        sds key = sdsfromlonglong(rand() % count);
-        dictEntry *de = dictFind(dict,key);
-        assert(de != NULL);
-        sdsfree(key);
-    }
-    end_benchmark("Random access of existing elements");
-
-    start_benchmark();
-    for (j = 0; j < count; j++) {
-        sds key = sdsfromlonglong(rand() % count);
-        key[0] = 'X';
-        dictEntry *de = dictFind(dict,key);
-        assert(de == NULL);
-        sdsfree(key);
-    }
-    end_benchmark("Accessing missing");
-
-    start_benchmark();
-    for (j = 0; j < count; j++) {
-        sds key = sdsfromlonglong(j);
-        int retval = dictDelete(dict,key);
-        assert(retval == DICT_OK);
-        key[0] += 17; /* Change first number to letter. */
-        retval = dictAdd(dict,key,(void*)j);
-        assert(retval == DICT_OK);
-    }
-    end_benchmark("Removing and adding");
-}
-#endif

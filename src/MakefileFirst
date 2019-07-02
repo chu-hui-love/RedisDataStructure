@@ -1,0 +1,24 @@
+ 
+CFLAGS=-g -Wall  
+ 
+app: main.o dict.o zmalloc.o serverlog.o localtime.o siphash.o
+	gcc -o app main.o dict.o zmalloc.o serverlog.o localtime.o siphash.o
+ 
+main.o: main.c dict.c serverlog.c
+	gcc -c $(CFLAGS) main.c -o main.o     # -o 将生成的默认名称adlistmain.o文件,重命名为 main.o      
+
+dict.o: dict.c zmalloc.c siphash.c serverlog.c 
+	gcc -c $(CFLAGS) dict.c
+
+zmalloc.o: zmalloc.c zmalloc.h 
+	gcc -c $(CFLAGS) zmalloc.c
+	
+siphash.o: siphash.c
+	gcc -c $(CFLAGS) siphash.c
+	
+serverlog.o: serverlog.c  localtime.c 
+	gcc -c  $(CFLAGS) serverlog.c  
+         
+localtime.o: localtime.c 
+	gcc -c $(CFLAGS) localtime.c 
+                                     

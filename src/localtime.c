@@ -103,21 +103,3 @@ void nolocks_localtime(struct tm *tmp, time_t t, time_t tz, int dst) {
     tmp->tm_year -= 1900;   /* Surprisingly tm_year is year-1900. */
 }
 
-#ifdef LOCALTIME_TEST_MAIN
-#include <stdio.h>
-
-int main(void) {
-    /* Obtain timezone and daylight info. */
-    tzset(); /* Now 'timezome' global is populated. */
-    time_t t = time(NULL);
-    struct tm *aux = localtime(&t);
-    int daylight_active = aux->tm_isdst;
-
-    struct tm tm;
-    char buf[1024];
-
-    nolocks_localtime(&tm,t,timezone,daylight_active);
-    strftime(buf,sizeof(buf),"%d %b %H:%M:%S",&tm);
-    printf("[timezone: %d, dl: %d] %s\n", (int)timezone, (int)daylight_active, buf);
-}
-#endif

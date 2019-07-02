@@ -2,10 +2,7 @@
  * 完全独立的日志
  */
 #include <syslog.h>
-#include <stdarg.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <stdio.h>
+
 
 
 #define LOG_MAX_LEN    1024 /* 系统日志默认最大长度.*/
@@ -20,7 +17,7 @@
 
 void serverLog(int level, const char *fmt, ...);
 
-void serverLogRaw(int level, const char *msg);
-
-
+void serverLogRaw(int level, const char *msg,const char* logfile);
+unsigned long getTimeZone(void);
+int getDaylightActive();
 
