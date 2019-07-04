@@ -1,6 +1,6 @@
 
 # 唯一的缺点就是需要将每一个.o文件写上
-obj=main.o dict.o zmalloc.o serverlog.o localtime.o siphash.o sds.o
+obj=main.o dict.o zmalloc.o serverlog.o localtime.o siphash.o sds.o adlist.o
 
 CFLAGS=-g -Wall 
 
