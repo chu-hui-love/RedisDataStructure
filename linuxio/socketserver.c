@@ -35,7 +35,7 @@ int main(int argc,char ** argv){
 	 			
 	 * protocol: 通常是0,表示为给定的域和套接字选择默认协议.
 	 * 		 
-	 * 什么都不想做
+	 * 
 	 *
 	*/
 	socfd=socket(AF_INET,SOCK_STREAM,0);
